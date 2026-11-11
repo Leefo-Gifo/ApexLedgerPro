@@ -10,34 +10,35 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build Flatpak
+  cleanup:
+    name: Free Runner Disk Space
     runs-on: ubuntu-latest
-
     steps:
-      - name: Get application source
-        uses: actions/checkout@v4
-
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache
-          sudo docker image prune --all --force
+          sudo docker system prune -af --volumes
           df -h
 
-      - name: Install Flatpak, Builder, and Tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder xvfb
-          pip install --break-system-packages requirements-parser packaging || pip install requirements-parser packaging
-          curl -L https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator.py -o /tmp/flatpak-pip-generator.py
+  build:
+    name: Build Flatpak
+    needs: cleanup
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
+      options: --privileged
 
-      - name: Add Flathub Remote (System)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Python dependency generator
         run: |
-          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          sudo flatpak update --appstream
+          python3 -m pip install --break-system-packages requirements-parser packaging
+          curl -L https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator.py -o /tmp/flatpak-pip-generator.py
 
       - name: Generate Python dependency manifest
         run: |
@@ -53,4 +54,3 @@ jobs:
           upload-artifact: true
           artifact-name: ApexLedgerPro
           cache: false
-          verbose: true

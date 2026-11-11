@@ -23,18 +23,19 @@ jobs:
       - name: Get application source
         uses: actions/checkout@v4
 
+     
       - name: Install Python dependency generator
         run: |
           python3 -m pip install --break-system-packages requirements-parser packaging
-          curl -L https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator.py -o /usr/local/bin/flatpak-pip-generator
-          chmod +x /usr/local/bin/flatpak-pip-generator
+          curl -L https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator.py -o /tmp/flatpak-pip-generator.py
 
       - name: Generate Python dependency manifest
         run: |
-          flatpak-pip-generator \
+          python3 /tmp/flatpak-pip-generator.py \
             --runtime=org.kde.Sdk//6.11 \
             --requirements-file=requirements.txt \
             --output=python3-deps
+
 
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6

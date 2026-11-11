@@ -1,0 +1,45 @@
+app-id: io.github.leefo_gifo.ApexLedgerPro
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.python3
+command: apex-ledger-pro
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --filesystem=xdg-documents
+
+build-options:
+  build-args:
+    - --share=network
+  append-path: /usr/lib/sdk/python3/bin
+
+modules:
+  - name: python-deps
+    buildsystem: simple
+    build-commands:
+      - python3 -m pip install --no-cache-dir --target=/app/share/apex-ledger-pro/pylib
+          PyQt6 openpyxl reportlab
+
+  - name: apex-ledger-pro
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 todo.py /app/share/apex-ledger-pro/todo.py
+      - install -Dm755 apex-ledger-pro /app/bin/apex-ledger-pro
+      - install -Dm644 io.github.leefo_gifo.ApexLedgerPro.desktop
+          /app/share/applications/io.github.leefo_gifo.ApexLedgerPro.desktop
+      - install -Dm644 io.github.leefo_gifo.ApexLedgerPro.svg
+          /app/share/icons/hicolor/scalable/apps/io.github.leefo_gifo.ApexLedgerPro.svg
+    sources:
+      - type: file
+        path: todo.py
+      - type: file
+        path: apex-ledger-pro
+      - type: file
+        path: io.github.leefo_gifo.ApexLedgerPro.desktop
+      - type: file
+        path: io.github.leefo_gifo.ApexLedgerPro.svg

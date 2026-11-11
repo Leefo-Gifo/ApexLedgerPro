@@ -27,7 +27,8 @@ jobs:
         run: |
           df -h
           du -sh /var/lib/flatpak /app /tmp /github/workspace 2>/dev/null || true
-
+          du -xhd1 / 2>/dev/null | sort -h
+          du -xhd1 /var /usr /opt /root 2>/dev/null | sort -h
       - name: Install Python dependency generator
         run: |
           python3 -m pip install --break-system-packages requirements-parser packaging

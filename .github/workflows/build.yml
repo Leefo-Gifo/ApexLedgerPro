@@ -18,8 +18,7 @@ jobs:
       - name: Get application source
         uses: actions/checkout@v4
 
-      # Free up 25-30+ GB on the GitHub runner host
-      - name: Free Disk Space (Runner Host)
+      - name: Free Disk Space
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
@@ -28,8 +27,10 @@ jobs:
           sudo docker image prune --all --force
           df -h
 
-      - name: Install Python dependency generator
+      - name: Install Flatpak, Builder, and Tools
         run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder xvfb
           pip install --break-system-packages requirements-parser packaging || pip install requirements-parser packaging
           curl -L https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator.py -o /tmp/flatpak-pip-generator.py
 

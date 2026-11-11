@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Apex Ledger Pro
+Comment=Real estate financial management
+Exec=apex-ledger-pro
+Icon=io.github.leefo_gifo.ApexLedgerPro
+Terminal=false
+Type=Application
+Categories=Office;Finance;

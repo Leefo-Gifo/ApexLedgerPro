@@ -1,26 +1,38 @@
+
 name: Build Apex Ledger Pro Flatpak
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     name: Build Flatpak
-    runs-on: ubuntu-latest
-
-    container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
-      options: --privileged
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@v2
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+
+      - name: Install Flatpak Build Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder xvfb
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
       - name: Install Python Manifest Generator
         run: |
@@ -32,6 +44,9 @@ jobs:
           python3 /tmp/flatpak-pip-generator.py \
             --requirements-file=requirements.txt \
             --output=python3-deps
+
+      - name: Check Available Disk Space
+        run: df -h /
 
       - name: Build and Bundle Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6

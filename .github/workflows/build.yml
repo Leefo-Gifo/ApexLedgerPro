@@ -15,15 +15,21 @@ jobs:
     name: Build Flatpak
     runs-on: ubuntu-latest
 
-    container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
-      options: --privileged
-
     steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /usr/share/swift
+          docker system prune --all --force
+          df -h /
+
       - name: Get application source
         uses: actions/checkout@v4
 
-     
       - name: Install Python dependency generator
         run: |
           python3 -m pip install --break-system-packages requirements-parser packaging
@@ -36,7 +42,6 @@ jobs:
             --requirements-file=requirements.txt \
             --output=python3-deps
 
-
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
@@ -44,3 +49,4 @@ jobs:
           bundle: ApexLedgerPro.flatpak
           upload-artifact: true
           artifact-name: ApexLedgerPro
+          cache: false

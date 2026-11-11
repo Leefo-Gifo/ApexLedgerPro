@@ -34,9 +34,10 @@ jobs:
           pip install --break-system-packages requirements-parser packaging || pip install requirements-parser packaging
           curl -L https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator.py -o /tmp/flatpak-pip-generator.py
 
-      - name: Add Flathub Remote
+      - name: Add Flathub Remote (System)
         run: |
-          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak update --appstream
 
       - name: Generate Python dependency manifest
         run: |

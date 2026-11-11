@@ -34,6 +34,10 @@ jobs:
           pip install --break-system-packages requirements-parser packaging || pip install requirements-parser packaging
           curl -L https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator.py -o /tmp/flatpak-pip-generator.py
 
+      - name: Add Flathub Remote
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
       - name: Generate Python dependency manifest
         run: |
           python3 /tmp/flatpak-pip-generator.py \
@@ -48,3 +52,4 @@ jobs:
           upload-artifact: true
           artifact-name: ApexLedgerPro
           cache: false
+          verbose: true

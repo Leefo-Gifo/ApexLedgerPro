@@ -18,13 +18,19 @@ jobs:
       image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: ApexLedgerPro.flatpak
           manifest-path: io.github.leefo_gifo.ApexLedgerPro.yml
           cache-key: flatpak-builder-${{ github.sha }}
+
+      - name: Upload Flatpak file
+        uses: actions/upload-artifact@v4
+        with:
+          name: ApexLedgerPro-flatpak
+          path: ApexLedgerPro.flatpak
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')

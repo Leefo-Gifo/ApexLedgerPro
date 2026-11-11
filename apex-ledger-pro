@@ -1,0 +1,3 @@
+#!/bin/sh
+export PYTHONPATH="/app/share/apex-ledger-pro/pylib${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 /app/share/apex-ledger-pro/todo.py "$@"

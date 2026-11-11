@@ -1,0 +1,45 @@
+
+name: Build Apex Ledger Pro Flatpak
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Flatpak
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
+      options: --privileged
+
+    steps:
+      - name: Get application source
+        uses: actions/checkout@v4
+
+      - name: Install Python dependency generator
+        run: |
+          python3 -m pip install --break-system-packages requirements-parser packaging
+          curl -L https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator.py -o /usr/local/bin/flatpak-pip-generator
+          chmod +x /usr/local/bin/flatpak-pip-generator
+
+      - name: Generate Python dependency manifest
+        run: |
+          flatpak-pip-generator \
+            --runtime=org.kde.Sdk//6.11 \
+            --requirements-file=requirements.txt \
+            --output=python3-deps
+
+      - name: Build Flatpak
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: org.apexledger.ApexLedgerPro.yml
+          bundle: ApexLedgerPro.flatpak
+          upload-artifact: true
+          artifact-name: ApexLedgerPro

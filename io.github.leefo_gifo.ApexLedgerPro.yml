@@ -20,7 +20,8 @@ modules:
     buildsystem: simple
     build-commands:
       - python3 -m pip install --no-cache-dir --target=/app/share/apex-ledger-pro/pylib PyQt6 openpyxl reportlab
-
+      - python3 -m pip install --no-cache-dir --target=/app/share/apex-ledger-pro/pylib PyQt6 openpyxl reportlab
+      - rm -rf /app/share/apex-ledger-pro/pylib/PIL /app/share/apex-ledger-pro/pylib/pillow* /app/share/apex-ledger-pro/pylib/pillow.libs
   - name: apex-ledger-pro
     buildsystem: simple
     build-commands:

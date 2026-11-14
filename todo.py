@@ -940,6 +940,45 @@ def _xl_font(size=11, bold=False, color="0F172A"):
         return XlFont(name="Calibri", size=size, bold=bold, color=color)
 
 
+def _calc_row_height(cell_specs, min_height=24, line_height=14.5, pad=8):
+    """Calculate row height (in points) so wrapped text fits cleanly inside a standard cell box."""
+    max_lines = 1
+    for text, col_width in cell_specs:
+        if not text:
+            continue
+        s = str(text)
+        chars_per_line = max(8, int((col_width or 14) * 0.92))
+        total_lines = 0
+        for paragraph in (s.splitlines() or [""]):
+            if not paragraph:
+                total_lines += 1
+                continue
+            words = paragraph.split(" ")
+            cur_len = 0
+            lines_in_para = 1
+            for w in words:
+                wlen = len(w)
+                if cur_len == 0:
+                    if wlen > chars_per_line:
+                        lines_in_para += (wlen - 1) // chars_per_line
+                        cur_len = wlen % chars_per_line or chars_per_line
+                    else:
+                        cur_len = wlen
+                elif cur_len + 1 + wlen <= chars_per_line:
+                    cur_len += 1 + wlen
+                else:
+                    lines_in_para += 1
+                    if wlen > chars_per_line:
+                        lines_in_para += (wlen - 1) // chars_per_line
+                        cur_len = wlen % chars_per_line or chars_per_line
+                    else:
+                        cur_len = wlen
+            total_lines += lines_in_para
+        if total_lines > max_lines:
+            max_lines = total_lines
+    return max(min_height, int(math.ceil(max_lines * line_height + pad)))
+
+
 def rebuild_tenant_ledger(user_id, tenant_id):
     conn = sqlite3.connect(get_db_path())
     cur = conn.cursor()
@@ -1048,7 +1087,11 @@ def rebuild_tenant_ledger(user_id, tenant_id):
         ws.cell(row=row, column=18, value=f"Initial security deposit received at lease start ({entry_date})")
         ws.cell(row=row, column=19, value="—")
 
-        ws.row_dimensions[row].height = 24
+        ws.row_dimensions[row].height = _calc_row_height([
+            (ws.cell(row=row, column=16).value, 30),
+            (ws.cell(row=row, column=18).value, 34),
+            (ws.cell(row=row, column=19).value, 34),
+        ], min_height=24)
         for col in range(1, 20):
             cell = ws.cell(row=row, column=col)
             cell.border = thin
@@ -1159,8 +1202,25 @@ def rebuild_tenant_ledger(user_id, tenant_id):
             ws.merge_cells(start_row=start_row, start_column=19,
                            end_row=end_row,     end_column=19)
 
+        row_heights = []
         for r in range(start_row, end_row + 1):
-            ws.row_dimensions[r].height = 24
+            rh = _calc_row_height([
+                (ws.cell(row=r, column=1).value, 14),
+                (ws.cell(row=r, column=16).value, 30),
+            ], min_height=24)
+            row_heights.append(rh)
+
+        notes_needed_h = _calc_row_height([
+            (common_note, 34),
+            (water_note, 34),
+        ], min_height=24)
+        total_block_h = sum(row_heights)
+        if total_block_h < notes_needed_h:
+            extra_per_row = int(math.ceil((notes_needed_h - total_block_h) / block_rows))
+            row_heights = [rh + extra_per_row for rh in row_heights]
+
+        for idx_r, r in enumerate(range(start_row, end_row + 1)):
+            ws.row_dimensions[r].height = row_heights[idx_r]
             for col in range(1, 20):
                 cell = ws.cell(row=r, column=col)
                 cell.border = thin
@@ -1175,9 +1235,9 @@ def rebuild_tenant_ledger(user_id, tenant_id):
                 elif not cell.font.bold:
                     cell.font = f_data
                 if col in [1, 2, 14, 17]:
-                    cell.alignment = XlAlignment(horizontal="center", vertical="center")
+                    cell.alignment = XlAlignment(horizontal="center", vertical="center", wrap_text=True)
                 elif col in [16, 18, 19]:
-                    cell.alignment = XlAlignment(horizontal="left", vertical="top", wrap_text=True)
+                    cell.alignment = XlAlignment(horizontal="left", vertical="center", wrap_text=True)
                 else:
                     cell.alignment = XlAlignment(horizontal="right", vertical="center")
 
@@ -1204,12 +1264,14 @@ def rebuild_tenant_ledger(user_id, tenant_id):
                 cell = ws.cell(row=row, column=col)
                 cell.border = thin
                 if col in [16, 18, 19]:
-                    cell.alignment = XlAlignment(horizontal="left", vertical="top", wrap_text=True)
+                    cell.alignment = XlAlignment(horizontal="left", vertical="center", wrap_text=True)
                 elif col in [1, 2, 17]:
                     cell.alignment = XlAlignment(horizontal="center", vertical="center")
                 else:
                     cell.alignment = XlAlignment(horizontal="right", vertical="center")
-            ws.row_dimensions[row].height = 24
+            ws.row_dimensions[row].height = _calc_row_height([
+                (ws.cell(row=row, column=16).value, 30),
+            ], min_height=24)
             row += 1
 
     # 4. Exit / Closing Settlement Section
@@ -1259,14 +1321,17 @@ def rebuild_tenant_ledger(user_id, tenant_id):
                 ws.cell(row=row, column=18, value=f"Exit reconciliation: {st_type.replace('_', ' ').title()}")
                 ws.cell(row=row, column=19, value="—")
 
-                ws.row_dimensions[row].height = 24
+                ws.row_dimensions[row].height = _calc_row_height([
+                    (ws.cell(row=row, column=16).value, 30),
+                    (ws.cell(row=row, column=18).value, 34),
+                ], min_height=24)
                 for col in range(1, 20):
                     cell = ws.cell(row=row, column=col)
                     cell.border = thin
                     if col not in [17]:
                         cell.font = f_data
                     if col in [1, 2, 14, 17]:
-                        cell.alignment = XlAlignment(horizontal="center", vertical="center")
+                        cell.alignment = XlAlignment(horizontal="center", vertical="center", wrap_text=True)
                     elif col in [16, 18, 19]:
                         cell.alignment = XlAlignment(horizontal="left", vertical="center", wrap_text=True)
                     else:
@@ -1378,7 +1443,10 @@ def _write_water_entry_row(ws, row, entry_date, family_count):
     f_note = _xl_font(size=9, bold=False, color="334155")
     fill_entry = PatternFill("solid", fgColor="F0FDF4")
 
-    ws.row_dimensions[row].height = 32
+    ws.row_dimensions[row].height = _calc_row_height([
+        (f"Tenant entered on {entry_date}. Initial family: {family_count}.", 32),
+        ("Lease commencement · Water metering starts", 40),
+    ], min_height=32)
     ws.cell(row=row, column=1, value="Tenant Entry")
     ws.cell(row=row, column=2, value=str(entry_date or "—"))
     for c in range(3, 10):
@@ -1441,9 +1509,13 @@ def _write_water_row(ws, row, billing_month, reading_date,
         if c in [1, 2]:
             cell.alignment = XlAlignment(horizontal="center", vertical="center")
         elif c in [13, 14]:
-            cell.alignment = XlAlignment(horizontal="left", vertical="top", wrap_text=True)
+            cell.alignment = XlAlignment(horizontal="left", vertical="center", wrap_text=True)
         else:
             cell.alignment = XlAlignment(horizontal="right", vertical="center")
+    ws.row_dimensions[row].height = _calc_row_height([
+        (remarks, 32),
+        (bill_note, 40),
+    ], min_height=32)
 
 
 def ensure_all_water_sheets(user_id, month_str, reading_date,
@@ -1547,7 +1619,13 @@ def update_single_water_sheet_guests(user_id, month_str, party_kind, party_name,
         ws.cell(row=target_row, column=12).value = f"=IF(I{target_row}>0, (J{target_row}+K{target_row})*I{target_row}, 0)"
         if bill_note is not None:
             note_cell = ws.cell(row=target_row, column=14, value=bill_note)
-            note_cell.alignment = XlAlignment(horizontal="left", vertical="top", wrap_text=True)
+            note_cell.alignment = XlAlignment(horizontal="left", vertical="center", wrap_text=True)
+        existing_rem = ws.cell(row=target_row, column=13).value or ""
+        existing_bn = ws.cell(row=target_row, column=14).value or ""
+        ws.row_dimensions[target_row].height = _calc_row_height([
+            (existing_rem, 32),
+            (existing_bn, 40),
+        ], min_height=32)
 
     _safe_save_workbook(wb, file_path)
     return file_path
@@ -1612,7 +1690,10 @@ def record_tenant_exit_in_water_ledger(user_id, tenant_name, exit_date):
             return file_path
 
     target_row = max(ws.max_row + 1, 2)
-    ws.row_dimensions[target_row].height = 34
+    ws.row_dimensions[target_row].height = _calc_row_height([
+        (f"Tenant exited on {exit_date}. Water account squared off & closed.", 32),
+        (f"Lease terminated on {exit_date}. Final settlement complete.", 40),
+    ], min_height=34)
 
     thin = _xl_border("000000")
     f_exit = _xl_font(size=10, bold=True, color="B91C1C")
@@ -2155,12 +2236,6 @@ def generate_bill_pdfs(target_dir, data, is_paid=False):
     story.append(Spacer(1, 20))
     story.append(_footer_line(S, "Page 1 of 1"))
     _safe_build(doc, story)
-    if is_paid:
-        try:
-            consumer_bill_path = os.path.join(target_dir, f"{prefix}_Consumer_Copy.pdf")
-            shutil.copy2(cust_path, consumer_bill_path)
-        except Exception:
-            pass
     return cust_path, own_path
 
 
@@ -2174,7 +2249,6 @@ def generate_receipt_pdfs(target_dir, data):
     date_tag = f"_{pdate_clean}" if pdate_clean else ""
     cust = os.path.join(target_dir, f"Receipt_{tag}{date_tag}{amt_tag}_Customer.pdf")
     own = os.path.join(target_dir, f"Receipt_{tag}{date_tag}{amt_tag}_Owner.pdf")
-    consumer = os.path.join(target_dir, f"Receipt_{tag}{date_tag}{amt_tag}_Consumer.pdf")
     S = _pdf_styles()
 
     bill_total = data.get("linked_bill_amount") or 0.0
@@ -2267,10 +2341,6 @@ def generate_receipt_pdfs(target_dir, data):
         story.append(Spacer(1, 8))
     story.append(_footer_line(S, "Page 1 of 1"))
     _safe_build(doc, story)
-    try:
-        shutil.copy2(cust, consumer)
-    except Exception:
-        pass
     return cust, own
 
 
